@@ -1,0 +1,4 @@
+*.crt binary
+*.cer binary
+*.der binary
+*.pem binary
