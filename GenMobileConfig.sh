@@ -6,7 +6,7 @@
 #  Created by Half-Qilin on 2025-08-08.
 #
 
-namespace="a19f30d6-0bff-469a-8c57-9311bce6edec"
+namespace=$(uuid -v 4)
 
 rm beeg.unsigned.plist
 echo """<?xml version="1.0" encoding="utf-8"?>
@@ -25,10 +25,14 @@ get_cert_name () {
         "GlobalSign") # Globalsign didn't give proper names...
             name="GlobalSign Root $(openssl x509 -noout -subject -in $1 -nameopt multiline | grep organizationalUnitName | sed -n 's/.*- //p')"
             ;;
+        "Apple Worldwide Developer Relations Certification Authority") # Apple did it too
+            name="Apple WWDR CA $(openssl x509 -noout -subject -in $1 -nameopt multiline | grep organizationalUnitName | sed -n 's/.*= //p')"
+            ;;
         *) # Most are fixed by this
             name=${name//-/}
             name=${name//Certification/Certificate}
             name=${name//Certificate Authority/CA}
+            name=${name//Worldwide Developer Relations/WWDR}
             name=${name//  / }
             ;;
     esac
@@ -48,15 +52,15 @@ scan_cert () {
                 <key>PayloadDisplayName</key>
                 <string>$certname</string>
                 <key>PayloadIdentifier</key>
-                <string>com.apple.security.root.$(uuid)</string>
+                <string>ca.litten.root.$(echo "$1" | md5sum)</string>
                 <key>PayloadType</key>
-                <string>com.apple.security.root</string>
+                <string>com.apple.security.pkcs1</string>
                 <key>PayloadUUID</key>
                 <string>$(uuid)</string>
                 <key>PayloadVersion</key>
                 <integer>1</integer>
             </dict>""" >> beeg.unsigned.plist
-        echo "Scanned $certname"
+        echo "Scanned $certname, at $1"
     fi
 }
 
@@ -77,7 +81,7 @@ scan_dir .
 for i in */; do
     # Can't include out-of-date certs
     if [[ $i != *"old"* ]]; then
-        scan_dir $i
+        scan_dir $(basename $i)
     fi
 done
 
@@ -87,7 +91,7 @@ echo """        </array>
         <key>PayloadDescription</key>
         <string>All the up-to-date SSL certificates from https://tlsroot.litten.ca! Last updated $(date -u +"%Y-%m-%d %H:%M:%S UTC").</string>
         <key>PayloadIdentifier</key>
-        <string>HanabiRootCA.$namespace</string>
+        <string>ca.litten.rootca</string>
         <key>PayloadScope</key>
         <string>System</string>
         <key>PayloadType</key>
