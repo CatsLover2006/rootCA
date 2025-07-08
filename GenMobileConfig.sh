@@ -8,12 +8,13 @@
 
 namespace="a19f30d6-0bff-469a-8c57-9311bce6edec"
 
+rm beeg.unsigned.plist
 echo """<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
     <dict>
         <key>PayloadContent</key>
-        <array>"""
+        <array>""" > beeg.unsigned.plist
 
 get_cert_name () {
     name=$3
@@ -54,7 +55,8 @@ scan_cert () {
                 <string>$(uuid)</string>
                 <key>PayloadVersion</key>
                 <integer>1</integer>
-            </dict>"""
+            </dict>""" >> beeg.unsigned.plist
+        echo "Scanned $certname"
     fi
 }
 
@@ -97,4 +99,31 @@ echo """        </array>
         <key>TargetDeviceType</key>
         <integer>1</integer>
     </dict>
-</plist>"""
+</plist>""" >> beeg.unsigned.plist
+
+if [ -f beeg.mobileconfig ]; then
+    rm beeg.mobileconfig
+fi
+
+valid="$(/usr/bin/security find-identity -p codesigning -v | grep "valid identities found")"
+valid="${valid// /}"
+
+if [[ "$valid" == "0valididentitiesfound" ]]; then
+    cp beeg.unsigned.plist beeg.mobileconfig
+    echo "Unable to sign mobileconfig file, will leave unsigned."
+else
+    certnum=1
+    if [[ "$valid" != "1valididentitiesfound" ]]; then
+        echo "Pick a signing certificate from the following:"
+        echo "$(/usr/bin/security find-identity -p codesigning -v | grep -v "valid identities found")"
+        read certnum
+    fi
+    echo "Using certificate number $certnum to sign mobileconfig file."
+    if [[ "$(/usr/bin/security find-identity -p codesigning -v | grep -v "valid identities found" | grep "$certnum)" )" =~ \"(.*)\" ]]; then
+        idname=${BASH_REMATCH[1]}
+        /usr/bin/security cms -S -N "$idname" -i beeg.unsigned.plist -o beeg.mobileconfig
+    else
+        cp beeg.unsigned.plist beeg.mobileconfig
+        echo "Error in signing mobileconfig file, will leave unsigned."
+    fi
+fi
