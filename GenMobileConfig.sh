@@ -60,7 +60,7 @@ scan_cert () {
                 <key>PayloadVersion</key>
                 <integer>1</integer>
             </dict>""" >> beeg.unsigned.plist
-        echo "Scanned $certname, at $1"
+        echo $(file $1)
     fi
 }
 
